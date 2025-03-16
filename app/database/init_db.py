@@ -6,10 +6,14 @@ import psycopg2
 from loguru import logger
 
 
-def wait_for_db(max_retries=10, retry_interval=5):
+def wait_for_db(max_retries=20, retry_interval=10):
     """انتظار برای آماده شدن دیتابیس"""
     db_url = os.getenv(
         "DATABASE_URL", "postgresql://postgres:postgres@db:5432/postgres")
+
+    # تلاش اتصال به دیتابیس postgres به جای instagram_bot
+    parts = db_url.split('/')
+    postgres_db_url = '/'.join(parts[:-1] + ['postgres'])
 
     retries = 0
     while retries < max_retries:
@@ -17,13 +21,13 @@ def wait_for_db(max_retries=10, retry_interval=5):
             logger.info(
                 f"تلاش برای اتصال به سرور دیتابیس ({retries + 1}/{max_retries})...")
             # اتصال به دیتابیس پیش‌فرض postgres برای بررسی دسترسی به سرور
-            conn = psycopg2.connect(db_url)
+            conn = psycopg2.connect(postgres_db_url)
             conn.close()
             logger.info("✅ اتصال به سرور دیتابیس موفقیت‌آمیز بود.")
             return True
-        except psycopg2.OperationalError:
+        except psycopg2.OperationalError as e:
             logger.warning(
-                f"⚠️ سرور دیتابیس هنوز آماده نیست. انتظار {retry_interval} ثانیه...")
+                f"⚠️ سرور دیتابیس هنوز آماده نیست. خطا: {str(e)[:100]}... انتظار {retry_interval} ثانیه...")
             retries += 1
             time.sleep(retry_interval)
 

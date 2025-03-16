@@ -7,7 +7,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=instagram_bot  # این خط تضمین می‌کند دیتابیس ایجاد می‌شود
+      - POSTGRES_DB=instagram_bot
     ports:
       - "5432:5432"
     volumes:
@@ -15,9 +15,10 @@ services:
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
+      interval: 10s
+      timeout: 10s
       retries: 5
+      start_period: 30s  # زمان بیشتری برای راه‌اندازی اولیه
 
   app:
     build: .
@@ -29,12 +30,13 @@ services:
       - "8000:8000"
     depends_on:
       db:
-        condition: service_healthy  # این خط صبر می‌کند تا دیتابیس کاملاً آماده شود
+        condition: service_healthy
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/instagram_bot
       - INSTAGRAM_USERNAME=${INSTAGRAM_USERNAME}
       - INSTAGRAM_PASSWORD=${INSTAGRAM_PASSWORD}
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: >
+      bash -c "sleep 10 && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     restart: always
 
 volumes:
