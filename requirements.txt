@@ -5,4 +5,5 @@ sqlalchemy==2.0.22
 instagrapi==1.19.4
 python-dotenv==1.0.0
 loguru==0.7.2
-pydantic==2.4.2
+pydantic==1.10.9
+Pillow>=8.1.1

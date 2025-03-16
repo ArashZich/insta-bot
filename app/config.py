@@ -15,8 +15,8 @@ DATABASE_URL = os.getenv(
 
 # تنظیمات رفتار انسانی ساده
 # تاخیر بین عملیات‌ها (ثانیه)
-MIN_ACTION_DELAY = 2
-MAX_ACTION_DELAY = 15
+MIN_ACTION_DELAY = 10
+MAX_ACTION_DELAY = 35
 
 # تاخیر طولانی تصادفی برای استراحت (دقیقه)
 MIN_BREAK_TIME = 5

@@ -5,8 +5,8 @@ services:
     build: .
     container_name: instagram_bot
     volumes:
-      - ./app:/app
-      - ./data:/data
+      - ./app:/app/app
+      - ./data:/app/data
     ports:
       - "8000:8000"
     depends_on:
