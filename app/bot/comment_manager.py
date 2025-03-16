@@ -1,4 +1,6 @@
 import random
+import time
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 import re
 
@@ -101,7 +103,7 @@ class CommentManager:
         comments = self.categorized_comments[category]
         return random.choice(comments)
 
-    def auto_comment_on_hashtag(self, hashtag, count=5):
+    def auto_comment_on_hashtag(self, hashtag, count=1):
         """کامنت گذاری خودکار روی پست‌های مرتبط با هشتگ"""
         try:
             self.logger.info(f"کامنت گذاری روی #{hashtag}")
@@ -113,30 +115,61 @@ class CommentManager:
                 self.logger.info(f"هیچ پستی با هشتگ #{hashtag} یافت نشد")
                 return 0
 
-            # محدود کردن تعداد
+            # فقط 1 پست را انتخاب می‌کنیم (کاهش شدید)
             if len(medias) > count:
                 medias = random.sample(medias, count)
 
             comment_count = 0
 
+            # محدودیت زمانی - فقط در ساعات خاص کامنت بگذاریم
+            current_hour = datetime.now().hour
+            if current_hour < 9 or current_hour > 22:
+                self.logger.info(
+                    "خارج از ساعت مناسب برای کامنت گذاری (9 صبح تا 10 شب)")
+                return 0
+
             for media in medias:
+                # استراحت بین کامنت‌ها
+                time.sleep(random.randint(60, 120))  # 1-2 دقیقه استراحت
+
                 # دریافت اطلاعات کامل پست برای کپشن
                 try:
                     media_info = self.client.media_info(media.id)
                     caption = media_info.caption_text if media_info.caption_text else ""
                     username = media_info.user.username
 
-                    # انتخاب کامنت مناسب
-                    comment_text = self.get_relevant_comment(caption, username)
+                    # بررسی اولیه - رد کردن پست‌های خاص
+                    # پست‌هایی با تعداد زیاد کامنت را رد می‌کنیم
+                    if hasattr(media_info, 'comment_count') and media_info.comment_count > 50:
+                        self.logger.info(
+                            f"رد کردن پست با {media_info.comment_count} کامنت")
+                        continue
 
-                    # ارسال کامنت
-                    if self.interaction_manager.comment_media(
+                    # اکانت‌های با فالوور زیاد را رد می‌کنیم
+                    user_info = self.client.user_info(media_info.user.pk)
+                    if user_info.follower_count > 10000:
+                        self.logger.info(
+                            f"رد کردن پست از کاربر با {user_info.follower_count} فالوور")
+                        continue
+
+                    # انتخاب کامنت ساده و کوتاه
+                    simple_comments = ["👍", "عالی", "خیلی خوب", "👌", "مرسی"]
+                    comment_text = random.choice(simple_comments)
+
+                    # ارسال کامنت با احتیاط بیشتر
+                    success = self.interaction_manager.comment_media(
                         media_id=media.id,
                         shortcode=media.code,
                         username=username,
                         text=comment_text
-                    ):
+                    )
+
+                    if success:
                         comment_count += 1
+                    else:
+                        # در صورت خطا، کل عملیات را متوقف می‌کنیم
+                        self.logger.warning("خطا در کامنت، توقف عملیات")
+                        break
 
                     # لایک کردن پست (احتمال 70%)
                     if random.random() < 0.7:
@@ -146,10 +179,13 @@ class CommentManager:
                             username=username
                         )
 
-                    if should_take_break():
-                        take_random_break(self.logger)
+                    # استراحت طولانی بعد از هر کامنت موفق
+                    time.sleep(random.randint(180, 300))  # 3-5 دقیقه
+
                 except Exception as e:
                     self.logger.error(f"خطا در کامنت روی پست {media.id}: {e}")
+                    # استراحت پس از خطا
+                    time.sleep(60)
                     continue
 
             self.logger.info(f"✅ {comment_count} کامنت با موفقیت ارسال شد")

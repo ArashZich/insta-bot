@@ -154,19 +154,37 @@ class InteractionManager:
 
             self.logger.info(
                 f"کامنت گذاشتن روی پست {shortcode or media_id} از {username or 'کاربر ناشناس'}")
-            random_delay()
+
+            # تاخیر طولانی‌تر قبل از کامنت گذاشتن (20 تا 40 ثانیه)
+            time.sleep(random.uniform(20, 40))
+
+            # بررسی محدودیت روزانه کامنت
+            if self.today_stats.comments_count >= 10:  # محدودیت روزانه
+                self.logger.warning("محدودیت روزانه کامنت رسیده است")
+                return False
+
+            # کوتاه‌سازی متن کامنت (از خطر کامنت‌های طولانی جلوگیری می‌کند)
+            if len(text) > 40:
+                text = text[:40]
 
             try:
                 result = self.client.media_comment(media_id, text)
                 success = result is not None
             except Exception as e:
-                if "challenge_required" in str(e):
+                error_message = str(e).lower()
+                if "challenge_required" in error_message:
                     self.logger.error(
                         f"❌ خطا در کامنت گذاشتن: challenge_required")
-                    self.session_manager.handle_challenge(e)
+                    # فقط ثبت می‌کنیم، بدون فراخوانی handle_challenge
+                    success = False
+                elif "spam" in error_message or "block" in error_message:
+                    self.logger.error(f"❌ محدودیت اسپم در کامنت: {e}")
+                    # زمان استراحت طولانی برای فرار از محدودیت اسپم
+                    time.sleep(900)  # 15 دقیقه استراحت
                     success = False
                 else:
-                    raise e
+                    self.logger.error(f"❌ خطای دیگر در کامنت گذاشتن: {e}")
+                    success = False
 
             if success:
                 self.logger.info(f"✅ کامنت موفق: {shortcode or media_id}")
@@ -183,6 +201,9 @@ class InteractionManager:
                 content=text,
                 success=success
             )
+
+            # تاخیر بعد از کامنت گذاشتن، حتی اگر ناموفق بوده
+            time.sleep(random.uniform(15, 30))
 
             return success
         except Exception as e:
