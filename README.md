@@ -46,7 +46,7 @@ flowchart TD
 
 1. کلون کردن مخزن:
 ```bash
-git clone https://github.com/yourusername/instagram-bot.git
+git clone https://github.com/ArashZich/insta-bot/tree/v1
 cd instagram-bot
 ```
 
