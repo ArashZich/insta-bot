@@ -16,6 +16,7 @@ services:
       - INSTAGRAM_USERNAME=${INSTAGRAM_USERNAME}
       - INSTAGRAM_PASSWORD=${INSTAGRAM_PASSWORD}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: always  # اضافه شده: راه‌اندازی مجدد خودکار در صورت خطا
 
   db:
     image: postgres:14
@@ -23,11 +24,11 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=instagram_bot
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: always  # اضافه شده: راه‌اندازی مجدد خودکار در صورت خطا
 
 volumes:
   postgres_data:

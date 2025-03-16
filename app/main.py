@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from app.database.init_db import initialize_database
 from app.database.connection import get_db, engine
 from app.database.models import Base
 from app.bot.session_manager import SessionManager
@@ -18,13 +19,28 @@ from app.api.stats import router as stats_router
 from app.api.interactions import router as interactions_router
 from app.bot.automated_bot import AutomatedBot
 
+
+# اطمینان از وجود دیتابیس
+if not initialize_database():
+    print("❌ خطا در آماده‌سازی دیتابیس. برنامه متوقف می‌شود.")
+    import sys
+    sys.exit(1)
+
 # ایجاد جداول دیتابیس اگر وجود ندارند
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    print("✅ جداول دیتابیس با موفقیت ایجاد شدند.")
+except Exception as e:
+    print(f"❌ خطا در ایجاد جداول دیتابیس: {e}")
+    traceback.print_exc()
+    import sys
+    sys.exit(1)
 
 # اطمینان از وجود پوشه data
 Path("data").mkdir(exist_ok=True)
 
 app = FastAPI(title="Instagram Bot API")
+
 
 # افزودن روترهای API
 app.include_router(api_router, prefix="/api")
