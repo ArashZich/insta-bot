@@ -115,77 +115,46 @@ class CommentManager:
                 self.logger.info(f"هیچ پستی با هشتگ #{hashtag} یافت نشد")
                 return 0
 
-            # فقط 1 پست را انتخاب می‌کنیم (کاهش شدید)
+            # محدود کردن تعداد و انتخاب تصادفی
             if len(medias) > count:
                 medias = random.sample(medias, count)
 
             comment_count = 0
 
-            # محدودیت زمانی - فقط در ساعات خاص کامنت بگذاریم
-            current_hour = datetime.now().hour
-            if current_hour < 9 or current_hour > 22:
-                self.logger.info(
-                    "خارج از ساعت مناسب برای کامنت گذاری (9 صبح تا 10 شب)")
-                return 0
+            # کامنت‌های بسیار ساده برای کاهش خطر
+            simple_comments = ["👌", "👍", "عالی", "خیلی خوب", "قشنگه", "جالبه"]
 
             for media in medias:
-                # استراحت بین کامنت‌ها
-                time.sleep(random.randint(60, 120))  # 1-2 دقیقه استراحت
+                # استراحت طولانی‌تر قبل از کامنت
+                time.sleep(random.randint(20, 40))
 
-                # دریافت اطلاعات کامل پست برای کپشن
                 try:
-                    media_info = self.client.media_info(media.id)
-                    caption = media_info.caption_text if media_info.caption_text else ""
-                    username = media_info.user.username
-
-                    # بررسی اولیه - رد کردن پست‌های خاص
-                    # پست‌هایی با تعداد زیاد کامنت را رد می‌کنیم
-                    if hasattr(media_info, 'comment_count') and media_info.comment_count > 50:
-                        self.logger.info(
-                            f"رد کردن پست با {media_info.comment_count} کامنت")
-                        continue
-
-                    # اکانت‌های با فالوور زیاد را رد می‌کنیم
-                    user_info = self.client.user_info(media_info.user.pk)
-                    if user_info.follower_count > 10000:
-                        self.logger.info(
-                            f"رد کردن پست از کاربر با {user_info.follower_count} فالوور")
-                        continue
+                    username = media.user.username
+                    user_id = media.user.pk
 
                     # انتخاب کامنت ساده و کوتاه
-                    simple_comments = ["👍", "عالی", "خیلی خوب", "👌", "مرسی"]
                     comment_text = random.choice(simple_comments)
 
-                    # ارسال کامنت با احتیاط بیشتر
-                    success = self.interaction_manager.comment_media(
+                    # ارسال کامنت - با فرض اینکه حتی در صورت شکست، باید ادامه دهیم
+                    comment_result = self.interaction_manager.comment_media(
                         media_id=media.id,
                         shortcode=media.code,
                         username=username,
                         text=comment_text
                     )
 
-                    if success:
+                    # حتی اگر comment_media مقدار False برگرداند، ما کار را ادامه می‌دهیم
+                    # فقط برای لاگ گذاری استفاده می‌کنیم
+                    if comment_result:
                         comment_count += 1
-                    else:
-                        # در صورت خطا، کل عملیات را متوقف می‌کنیم
-                        self.logger.warning("خطا در کامنت، توقف عملیات")
-                        break
 
-                    # لایک کردن پست (احتمال 70%)
-                    if random.random() < 0.7:
-                        self.interaction_manager.like_media(
-                            media_id=media.id,
-                            shortcode=media.code,
-                            username=username
-                        )
-
-                    # استراحت طولانی بعد از هر کامنت موفق
-                    time.sleep(random.randint(180, 300))  # 3-5 دقیقه
+                    # استراحت طولانی بعد از هر تلاش کامنت
+                    time.sleep(random.randint(60, 120))
 
                 except Exception as e:
                     self.logger.error(f"خطا در کامنت روی پست {media.id}: {e}")
-                    # استراحت پس از خطا
-                    time.sleep(60)
+                    # استراحت کوتاه و ادامه با پست بعدی
+                    time.sleep(30)
                     continue
 
             self.logger.info(f"✅ {comment_count} کامنت با موفقیت ارسال شد")

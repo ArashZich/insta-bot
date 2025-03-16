@@ -328,23 +328,43 @@ class AutomatedBot:
         except Exception as e:
             self.logger.error(f"❌ خطا در فالوبک خودکار: {e}")
 
-    async def _comment_on_popular_posts(self, count=2):
+    # کاهش به 1 کامنت در هر اجرا
+    async def _comment_on_popular_posts(self, count=1):
         """کامنت گذاری روی پست‌های محبوب هشتگ‌ها"""
         try:
-            # انتخاب یک هشتگ تصادفی از لیست
-            hashtag = random.choice(self.hashtags)
+            # بررسی ساعت - فقط در ساعات خاص کامنت بگذاریم
+            current_hour = datetime.now().hour
+            if current_hour < 10 or current_hour > 20:
+                self.logger.info(
+                    "خارج از ساعت مناسب برای کامنت گذاری (10 صبح تا 8 شب)")
+                return
+
+            # محدودیت احتمال - فقط 30% احتمال کامنت گذاری
+            if random.random() > 0.3:
+                self.logger.info("عدم انتخاب کامنت گذاری با توجه به احتمال")
+                return
+
+            # انتخاب یک هشتگ تصادفی از لیست (ترجیحاً هشتگ‌های کم خطرتر)
+            safe_hashtags = ["طبیعت", "منظره", "آسمان", "گل", "کتاب"]
+            hashtag = random.choice(
+                safe_hashtags if safe_hashtags else self.hashtags)
+
             self.logger.info(f"💬 کامنت گذاری روی پست‌های هشتگ #{hashtag}")
 
+            # استفاده از متد کامنت گذاری که اصلاح کرده‌ایم
+            # حتی اگر کامنت شکست بخورد، فرآیند کلی ادامه پیدا می‌کند
             result = self.comment_manager.auto_comment_on_hashtag(
                 hashtag, count=count)
 
             # استراحت طولانی‌تر بعد از کامنت گذاری
-            await asyncio.sleep(random.randint(60, 120))
+            await asyncio.sleep(random.randint(300, 600))  # 5-10 دقیقه
 
             self.logger.info(f"✅ کامنت گذاری پایان یافت: {result} کامنت")
 
         except Exception as e:
             self.logger.error(f"❌ خطا در کامنت گذاری: {e}")
+            # استراحت طولانی در صورت خطا
+            await asyncio.sleep(300)  # 5 دقیقه
 
     async def _view_stories(self, limit=8):
         """مشاهده استوری‌های کاربران محبوب"""

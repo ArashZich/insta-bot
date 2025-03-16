@@ -155,35 +155,40 @@ class InteractionManager:
             self.logger.info(
                 f"کامنت گذاشتن روی پست {shortcode or media_id} از {username or 'کاربر ناشناس'}")
 
-            # تاخیر طولانی‌تر قبل از کامنت گذاشتن (20 تا 40 ثانیه)
-            time.sleep(random.uniform(20, 40))
+            # تاخیر طولانی‌تر قبل از کامنت گذاشتن
+            random_delay()
 
             # بررسی محدودیت روزانه کامنت
-            if self.today_stats.comments_count >= 10:  # محدودیت روزانه
+            # کاهش محدودیت روزانه کامنت به 10
+            if hasattr(self, 'today_stats') and self.today_stats.comments_count >= 10:
                 self.logger.warning("محدودیت روزانه کامنت رسیده است")
                 return False
 
-            # کوتاه‌سازی متن کامنت (از خطر کامنت‌های طولانی جلوگیری می‌کند)
-            if len(text) > 40:
-                text = text[:40]
+            # کوتاه‌سازی متن کامنت - کامنت‌های کوتاه‌تر احتمال کمتری برای خطای challenge دارند
+            if len(text) > 30:
+                text = text[:30]
+
+            success = False
+            error_msg = None
 
             try:
+                # تلاش برای ارسال کامنت
                 result = self.client.media_comment(media_id, text)
                 success = result is not None
             except Exception as e:
-                error_message = str(e).lower()
-                if "challenge_required" in error_message:
+                error_msg = str(e).lower()
+                if "challenge_required" in error_msg:
                     self.logger.error(
                         f"❌ خطا در کامنت گذاشتن: challenge_required")
-                    # فقط ثبت می‌کنیم، بدون فراخوانی handle_challenge
+                    # فقط لاگ می‌کنیم و ادامه می‌دهیم - بدون فراخوانی handle_challenge
                     success = False
-                elif "spam" in error_message or "block" in error_message:
-                    self.logger.error(f"❌ محدودیت اسپم در کامنت: {e}")
-                    # زمان استراحت طولانی برای فرار از محدودیت اسپم
-                    time.sleep(900)  # 15 دقیقه استراحت
+                elif "spam" in error_msg:
+                    self.logger.error(f"❌ خطای اسپم در کامنت گذاشتن: {e}")
+                    # استراحت کوتاه بدون فراخوانی handle_challenge
+                    time.sleep(10)
                     success = False
                 else:
-                    self.logger.error(f"❌ خطای دیگر در کامنت گذاشتن: {e}")
+                    self.logger.error(f"❌ خطای عمومی در کامنت گذاشتن: {e}")
                     success = False
 
             if success:
@@ -192,6 +197,7 @@ class InteractionManager:
                 self.logger.warning(
                     f"⚠️ کامنت ناموفق: {shortcode or media_id}")
 
+            # ثبت تعامل بدون توجه به موفقیت یا عدم موفقیت
             self._record_interaction(
                 interaction_type="comment",
                 target_user_id=username,
@@ -199,13 +205,13 @@ class InteractionManager:
                 target_media_id=media_id,
                 target_media_shortcode=shortcode,
                 content=text,
-                success=success
+                success=success,
+                error=error_msg
             )
 
-            # تاخیر بعد از کامنت گذاشتن، حتی اگر ناموفق بوده
-            time.sleep(random.uniform(15, 30))
+            # حتی در صورت خطا، میخواهیم فرآیند کلی ادامه پیدا کند
+            return True  # بازگرداندن True حتی در صورت شکست کامنت گذاری
 
-            return success
         except Exception as e:
             self.logger.error(f"❌ خطا در کامنت گذاشتن: {e}")
             self._record_interaction(

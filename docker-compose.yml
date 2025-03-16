@@ -38,6 +38,8 @@ services:
     command: >
       bash -c "sleep 10 && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 120"
     restart: always
+    networks:
+      - bot_network
     
   watchdog:
     build: .
@@ -47,8 +49,17 @@ services:
       - ./data:/app/data
     depends_on:
       - app
-    command: python -u app/watchdog.py
+    command: >
+      bash -c "sleep 120 && python -u app/watchdog.py"  # تاخیر 2 دقیقه قبل از شروع واچ‌داگ
     restart: always
+    networks:
+      - bot_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # دسترسی به هاست کامپیوتر
+
+networks:
+  bot_network:
+    driver: bridge
 
 volumes:
   postgres_data:
