@@ -57,7 +57,8 @@ class SessionManager:
                         f"⚠️ سشن قبلی معتبر نیست، لاگین مجدد: {se}")
 
             # تنظیم پارامترهای کلاینت و لاگین
-            self.client.delay_range = [2, 5]  # تاخیر کمتر برای لاگین
+            # تاخیر بیشتر برای جلوگیری از محدودیت‌ها
+            self.client.delay_range = [3, 8]
             self.client.request_timeout = 90
 
             self.logger.info("در حال اجرای لاگین...")
@@ -82,7 +83,7 @@ class SessionManager:
             self.logger.error(f"❌ خطا در لاگین: {str(e)}")
             self.last_error = str(e)
             import traceback
-            traceback.print_exc()
+            traceback.print_exc()  # چاپ کامل خطا برای دیباگ
             return False
 
     def record_session_start(self):
@@ -127,8 +128,15 @@ class SessionManager:
         """مدیریت چالش‌های اینستاگرام"""
         self.logger.warning(f"⚠️ چالش اینستاگرام تشخیص داده شد: {e}")
 
-        # ریست کردن کلاینت
+        # تلاش برای لاگین مجدد
         self.logged_in = False
+        self.logger.info("تلاش مجدد برای لاگین پس از چالش...")
+        time.sleep(30)  # کمی صبر کنید
+        login_result = self.login()
+
+        if login_result:
+            self.logger.info("لاگین مجدد پس از چالش موفقیت‌آمیز بود")
+            return True
 
         # بازگشت False برای اطلاع‌رسانی به متدهای دیگر
         return False

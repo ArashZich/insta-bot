@@ -5,6 +5,8 @@ import json
 from datetime import datetime
 from loguru import logger
 import os
+import sys
+from pathlib import Path
 from app.config import (
     MIN_ACTION_DELAY,
     MAX_ACTION_DELAY,
@@ -18,20 +20,36 @@ from app.config import (
 
 def setup_logger():
     """تنظیم لاگر"""
+    # حذف همه هندلرهای فعلی
     logger.remove()
+
+    # مطمئن شوید پوشه data وجود دارد
+    Path("data").mkdir(exist_ok=True)
+
+    # افزودن هندلر فایل با سطح DEBUG
     logger.add(
         "data/bot.log",
-        rotation="1 day",
+        rotation="500 MB",  # افزایش سایز فایل لاگ
         retention="7 days",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
         level="DEBUG",
+        backtrace=True,  # نمایش traceback کامل
+        diagnose=True,   # اطلاعات تشخیصی بیشتر
     )
+
+    # افزودن هندلر کنسول با سطح INFO
     logger.add(
-        lambda msg: print(msg),
+        sys.stdout,
         colorize=True,
         format="{time:HH:mm:ss} | <level>{level}</level> | {message}",
         level="INFO",
+        backtrace=True,
+        diagnose=True,
     )
+
+    # آزمایش لاگر
+    logger.info("Logger initialized successfully")
+
     return logger
 
 
@@ -68,14 +86,27 @@ def get_actions_before_break():
 
 def load_json_file(file_path):
     """خواندن فایل JSON"""
+    # اطمینان از وجود فایل
     if not os.path.exists(file_path):
+        # ایجاد پوشه والد در صورت نیاز
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # ایجاد فایل خالی
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump([], f)
         return []
 
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        logger.error(f"خطا در خواندن فایل JSON: {file_path}")
+        return []
 
 
 def save_json_file(file_path, data):
     """ذخیره داده در فایل JSON"""
+    # اطمینان از وجود پوشه والد
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)

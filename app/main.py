@@ -1,9 +1,11 @@
 import time
 import asyncio
 import uvicorn
+import traceback
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from app.database.connection import get_db, engine
 from app.database.models import Base
@@ -15,6 +17,9 @@ from app.api.router import router as api_router
 
 # ایجاد جداول دیتابیس اگر وجود ندارند
 Base.metadata.create_all(bind=engine)
+
+# اطمینان از وجود پوشه data
+Path("data").mkdir(exist_ok=True)
 
 app = FastAPI(title="Instagram Bot API")
 
@@ -37,8 +42,34 @@ async def run_bot():
     if not session_manager:
         session_manager = SessionManager()
 
-    # لاگین به اینستاگرام
-    if not session_manager.login():
+    # لاگین به اینستاگرام - با منطق بهبود یافته
+    login_attempts = 0
+    max_attempts = 3
+
+    while login_attempts < max_attempts:
+        try:
+            login_success = session_manager.login()
+            if login_success:
+                session_manager.logger.info(
+                    "✅ لاگین موفقیت‌آمیز به اینستاگرام")
+                break
+            else:
+                login_attempts += 1
+                session_manager.logger.error(
+                    f"❌ تلاش {login_attempts}/{max_attempts} لاگین ناموفق بود")
+                if login_attempts < max_attempts:
+                    await asyncio.sleep(30)  # انتظار قبل از تلاش مجدد
+        except Exception as e:
+            login_attempts += 1
+            session_manager.logger.error(
+                f"❌ خطا در تلاش {login_attempts}/{max_attempts} لاگین: {e}")
+            session_manager.logger.error(
+                f"Traceback: {traceback.format_exc()}")
+            if login_attempts < max_attempts:
+                await asyncio.sleep(30)  # انتظار قبل از تلاش مجدد
+
+    if login_attempts >= max_attempts:
+        session_manager.logger.error("❌ تمام تلاش‌های لاگین ناموفق بودند")
         return
 
     # ثبت شروع سشن در دیتابیس
