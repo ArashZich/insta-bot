@@ -15,19 +15,19 @@ DATABASE_URL = os.getenv(
 
 # تنظیمات رفتار انسانی ساده
 # تاخیر بین عملیات‌ها (ثانیه)
-MIN_ACTION_DELAY = 5
-MAX_ACTION_DELAY = 20
+MIN_ACTION_DELAY = 10
+MAX_ACTION_DELAY = 30
 
 # تاخیر طولانی تصادفی برای استراحت (دقیقه)
-MIN_BREAK_TIME = 2
-MAX_BREAK_TIME = 8
+MIN_BREAK_TIME = 5
+MAX_BREAK_TIME = 15
 
 # احتمال استراحت طولانی بین عملیات‌ها (0 تا 1)
-LONG_BREAK_PROBABILITY = 0.03
+LONG_BREAK_PROBABILITY = 0.05
 
 # تعداد عملیات پیش از استراحت اجباری
-MIN_ACTIONS_BEFORE_BREAK = 15
-MAX_ACTIONS_BEFORE_BREAK = 30
+MIN_ACTIONS_BEFORE_BREAK = 10
+MAX_ACTIONS_BEFORE_BREAK = 20
 
 # مسیر فایل‌های دیتا
 COMMENTS_FILE = "data/comments.json"
@@ -35,10 +35,10 @@ HASHTAGS_FILE = "data/hashtags.json"
 
 # تنظیمات اولویت‌بندی فعالیت‌ها (0 تا 100)
 ACTIVITY_WEIGHTS = {
-    "like": 60,           # لایک کردن
-    "comment": 80,        # کامنت گذاشتن
+    "like": 70,           # لایک کردن (افزایش یافته)
+    "comment": 50,        # کامنت گذاشتن (کاهش یافته به دلیل خطاها)
     "follow": 40,         # فالو کردن
     "unfollow": 30,       # آنفالو کردن
     "view_story": 70,     # دیدن استوری
-    "dm": 50              # ارسال پیام مستقیم
+    "dm": 30              # ارسال پیام مستقیم (کاهش یافته)
 }

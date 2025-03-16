@@ -128,15 +128,24 @@ class SessionManager:
         """مدیریت چالش‌های اینستاگرام"""
         self.logger.warning(f"⚠️ چالش اینستاگرام تشخیص داده شد: {e}")
 
-        # تلاش برای لاگین مجدد
+        # ذخیره وضعیت قبلی لاگین
+        was_logged_in = self.logged_in
         self.logged_in = False
+
+        # بازنشانی سشن
+        self.client = Client()
+
         self.logger.info("تلاش مجدد برای لاگین پس از چالش...")
-        time.sleep(30)  # کمی صبر کنید
+        time.sleep(60)  # زمان انتظار بیشتر برای کاهش محدودیت‌ها
+
+        # تلاش برای لاگین مجدد
         login_result = self.login()
 
         if login_result:
             self.logger.info("لاگین مجدد پس از چالش موفقیت‌آمیز بود")
             return True
-
-        # بازگشت False برای اطلاع‌رسانی به متدهای دیگر
-        return False
+        else:
+            self.logger.error("لاگین مجدد پس از چالش ناموفق بود")
+            # اگر قبلاً لاگین بودیم، وضعیت را حفظ می‌کنیم تا بات متوقف نشود
+            self.logged_in = was_logged_in
+            return False

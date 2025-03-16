@@ -98,16 +98,16 @@ class AutomatedBot:
                 # فعالیت‌های اصلی
                 activities = [
                     (self._interact_with_hashtags, self.activity_weights.get(
-                        'like', 60) + self.activity_weights.get('comment', 80)),
+                        'like', 60) + self.activity_weights.get('comment', 50)),
                     (self._follow_from_hashtags,
                      self.activity_weights.get('follow', 40)),
                     (self._auto_unfollow, self.activity_weights.get('unfollow', 30)),
                     (self._auto_follow_back,
                      self.activity_weights.get('follow', 40) // 2),
                     (self._comment_on_popular_posts,
-                     self.activity_weights.get('comment', 80) * 1.2),
+                     self.activity_weights.get('comment', 50) * 1.2),
                     (self._view_stories, self.activity_weights.get('view_story', 70)),
-                    (self._send_direct_messages, self.activity_weights.get('dm', 50))
+                    (self._send_direct_messages, self.activity_weights.get('dm', 30))
                 ]
 
                 # انتخاب 3 تا 4 فعالیت وزن‌دار
@@ -130,7 +130,16 @@ class AutomatedBot:
                 break
             except Exception as e:
                 self.logger.error(f"خطا در چرخه کاری: {e}")
-                await asyncio.sleep(180)  # استراحت 3 دقیقه بعد از خطا
+                # افزودن لاگ بیشتر برای تشخیص بهتر مشکل
+                import traceback
+                self.logger.error(f"جزئیات خطا: {traceback.format_exc()}")
+                # زمان استراحت طولانی‌تر بعد از خطا و ادامه چرخه
+                self.logger.info("استراحت پس از خطا و تلاش مجدد در 5 دقیقه")
+                await asyncio.sleep(300)
+                # بازنشانی شمارنده‌ها
+                self.actions_count = 0
+                from app.bot.utils import get_actions_before_break
+                self.actions_before_break = get_actions_before_break()
 
     def _weighted_sample(self, weighted_items, k=3):
         """انتخاب تصادفی براساس وزن"""
@@ -327,7 +336,6 @@ class AutomatedBot:
         try:
             self.logger.info("📩 شروع ارسال پیام مستقیم")
 
-            # انتخاب کاربرانی که اخیراً با آنها تعامل داشته‌ایم
             # جستجوی یک هشتگ برای یافتن کاربران
             hashtag = random.choice(self.hashtags)
             medias = self.interaction_manager.search_hashtag(hashtag)
@@ -337,8 +345,18 @@ class AutomatedBot:
                     f"هیچ کاربری برای ارسال پیام از هشتگ #{hashtag} یافت نشد")
                 return
 
-            # انتخاب تعدادی از کاربران به صورت تصادفی
-            selected_medias = random.sample(medias, min(limit, len(medias)))
+            # کاربران منحصر به فرد را انتخاب می‌کنیم
+            unique_users = {}
+            for media in medias:
+                if media.user.pk not in unique_users:
+                    unique_users[media.user.pk] = media
+
+            # انتخاب کاربران تصادفی
+            if len(unique_users) > limit:
+                selected_medias = random.sample(
+                    list(unique_users.values()), limit)
+            else:
+                selected_medias = list(unique_users.values())
 
             # پیام‌های ساده
             messages = [
