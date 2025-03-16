@@ -3,6 +3,7 @@ import asyncio
 import uvicorn
 import traceback
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -39,7 +40,52 @@ except Exception as e:
 # اطمینان از وجود پوشه data
 Path("data").mkdir(exist_ok=True)
 
-app = FastAPI(title="Instagram Bot API")
+app = FastAPI(
+    title="Instagram Bot API",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
+
+# میدلور برای مدیریت خطاها
+
+
+@app.middleware("http")
+async def handle_exceptions(request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        if session_manager and session_manager.logger:
+            session_manager.logger.error(f"خطای HTTP: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "خطای داخلی سرور. لطفا بعدا تلاش کنید."}
+        )
+
+# افزودن endpoint سلامتی برای بررسی وضعیت
+
+
+@app.get("/health")
+def health_check():
+    """بررسی وضعیت سلامت سرویس"""
+    global session_manager
+
+    db_status = "online"
+    try:
+        # بررسی اتصال به دیتابیس
+        with engine.connect() as conn:
+            conn.execute("SELECT 1")
+    except Exception:
+        db_status = "offline"
+
+    bot_status = "online" if session_manager and session_manager.logged_in else "offline"
+
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "database": db_status,
+        "bot": bot_status
+    }
 
 
 # افزودن روترهای API
@@ -60,62 +106,74 @@ automated_bot = None
 async def run_bot():
     global session_manager, interaction_manager, follower_manager, comment_manager, automated_bot
 
-    # ایجاد نمونه‌های کلاس اصلی اگر وجود ندارند
-    if not session_manager:
-        session_manager = SessionManager()
+    try:
+        # ایجاد نمونه‌های کلاس اصلی اگر وجود ندارند
+        if not session_manager:
+            session_manager = SessionManager()
 
-    # لاگین به اینستاگرام - با منطق بهبود یافته
-    login_attempts = 0
-    max_attempts = 3
+        # لاگین به اینستاگرام - با منطق بهبود یافته
+        login_attempts = 0
+        max_attempts = 3
 
-    while login_attempts < max_attempts:
-        try:
-            login_success = session_manager.login()
-            if login_success:
-                session_manager.logger.info(
-                    "✅ لاگین موفقیت‌آمیز به اینستاگرام")
-                break
-            else:
+        while login_attempts < max_attempts:
+            try:
+                login_success = session_manager.login()
+                if login_success:
+                    session_manager.logger.info(
+                        "✅ لاگین موفقیت‌آمیز به اینستاگرام")
+                    break
+                else:
+                    login_attempts += 1
+                    session_manager.logger.error(
+                        f"❌ تلاش {login_attempts}/{max_attempts} لاگین ناموفق بود")
+                    if login_attempts < max_attempts:
+                        # انتظار بیشتر قبل از تلاش مجدد
+                        await asyncio.sleep(60)
+            except Exception as e:
                 login_attempts += 1
                 session_manager.logger.error(
-                    f"❌ تلاش {login_attempts}/{max_attempts} لاگین ناموفق بود")
+                    f"❌ خطا در تلاش {login_attempts}/{max_attempts} لاگین: {e}")
+                session_manager.logger.error(
+                    f"Traceback: {traceback.format_exc()}")
                 if login_attempts < max_attempts:
-                    await asyncio.sleep(30)  # انتظار قبل از تلاش مجدد
-        except Exception as e:
-            login_attempts += 1
-            session_manager.logger.error(
-                f"❌ خطا در تلاش {login_attempts}/{max_attempts} لاگین: {e}")
+                    await asyncio.sleep(60)  # انتظار بیشتر قبل از تلاش مجدد
+
+        if login_attempts >= max_attempts:
+            session_manager.logger.error("❌ تمام تلاش‌های لاگین ناموفق بودند")
+            return
+
+        # ثبت شروع سشن در دیتابیس
+        session_manager.record_session_start()
+
+        # ایجاد نمونه‌های مدیر تعامل، فالو و کامنت
+        if not interaction_manager:
+            interaction_manager = InteractionManager(session_manager)
+
+        if not follower_manager:
+            follower_manager = FollowerManager(
+                session_manager, interaction_manager)
+
+        if not comment_manager:
+            comment_manager = CommentManager(
+                session_manager, interaction_manager)
+
+        # ایجاد و شروع بات خودکار
+        if not automated_bot:
+            automated_bot = AutomatedBot(
+                session_manager, interaction_manager, follower_manager, comment_manager)
+            await automated_bot.start()
+
+        session_manager.logger.info(
+            "بات با موفقیت راه‌اندازی شد و در حال کار خودکار است")
+    except Exception as e:
+        # ثبت خطای کلی
+        if session_manager and session_manager.logger:
+            session_manager.logger.error(f"خطای کلی در راه‌اندازی بات: {e}")
             session_manager.logger.error(
                 f"Traceback: {traceback.format_exc()}")
-            if login_attempts < max_attempts:
-                await asyncio.sleep(30)  # انتظار قبل از تلاش مجدد
-
-    if login_attempts >= max_attempts:
-        session_manager.logger.error("❌ تمام تلاش‌های لاگین ناموفق بودند")
-        return
-
-    # ثبت شروع سشن در دیتابیس
-    session_manager.record_session_start()
-
-    # ایجاد نمونه‌های مدیر تعامل، فالو و کامنت
-    if not interaction_manager:
-        interaction_manager = InteractionManager(session_manager)
-
-    if not follower_manager:
-        follower_manager = FollowerManager(
-            session_manager, interaction_manager)
-
-    if not comment_manager:
-        comment_manager = CommentManager(session_manager, interaction_manager)
-
-    # ایجاد و شروع بات خودکار
-    if not automated_bot:
-        automated_bot = AutomatedBot(
-            session_manager, interaction_manager, follower_manager, comment_manager)
-        await automated_bot.start()
-
-    session_manager.logger.info(
-        "بات با موفقیت راه‌اندازی شد و در حال کار خودکار است")
+        else:
+            print(f"Fatal error: {e}")
+            print(traceback.format_exc())
 
 # مسیرهای API اصلی
 

@@ -135,14 +135,19 @@ class SessionManager:
         # بازنشانی سشن
         self.client = Client()
 
-        self.logger.info("تلاش مجدد برای لاگین پس از چالش...")
-        time.sleep(60)  # زمان انتظار بیشتر برای کاهش محدودیت‌ها
+        # افزایش زمان انتظار
+        pause_time = 180  # 3 دقیقه
+        self.logger.info(f"توقف فعالیت به مدت {pause_time} ثانیه...")
+        time.sleep(pause_time)
 
         # تلاش برای لاگین مجدد
+        self.logger.info("تلاش مجدد برای لاگین پس از چالش...")
         login_result = self.login()
 
         if login_result:
             self.logger.info("لاگین مجدد پس از چالش موفقیت‌آمیز بود")
+            # کاهش سرعت عملیات پس از چالش
+            self.client.delay_range = [10, 15]  # افزایش تاخیر
             return True
         else:
             self.logger.error("لاگین مجدد پس از چالش ناموفق بود")

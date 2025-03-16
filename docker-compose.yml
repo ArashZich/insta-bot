@@ -36,7 +36,18 @@ services:
       - INSTAGRAM_USERNAME=${INSTAGRAM_USERNAME}
       - INSTAGRAM_PASSWORD=${INSTAGRAM_PASSWORD}
     command: >
-      bash -c "sleep 10 && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+      bash -c "sleep 10 && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 120"
+    restart: always
+    
+  watchdog:
+    build: .
+    container_name: instagram_bot_watchdog
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+    depends_on:
+      - app
+    command: python -u app/watchdog.py
     restart: always
 
 volumes:

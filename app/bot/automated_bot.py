@@ -80,10 +80,35 @@ class AutomatedBot:
         """چرخه اصلی کاری بات"""
         self.logger.info("چرخه کاری خودکار بات شروع شد")
 
+        # شمارنده‌ها برای مدیریت بهتر محدودیت‌ها
+        daily_actions = {
+            "like": 0,
+            "comment": 0,
+            "follow": 0,
+            "unfollow": 0,
+            "dm": 0
+        }
+
+        error_count = 0  # شمارنده خطاها
+        max_consecutive_errors = 5  # حداکثر خطای پشت سر هم
+
         while self.running:
             try:
+                # کاهش شمارنده خطا در صورت عملیات موفق
+                error_count = 0
+
                 # بررسی ساعت روز برای تنظیم فعالیت
                 current_hour = datetime.now().hour
+
+                # محدودیت‌های روزانه - توقف اگر از حد مجاز گذشته
+                if daily_actions["like"] > 150 or daily_actions["follow"] > 50:
+                    self.logger.warning(
+                        "محدودیت روزانه رسیده، استراحت طولانی...")
+                    await asyncio.sleep(3600)  # استراحت 1 ساعته
+                    # ریست شمارنده‌ها در نیمه شب
+                    if datetime.now().hour == 0:
+                        daily_actions = {key: 0 for key in daily_actions}
+                    continue
 
                 # ساعات شب (1 صبح تا 7 صبح): فعالیت کمتر
                 if 1 <= current_hour < 7:
@@ -110,18 +135,30 @@ class AutomatedBot:
                     (self._send_direct_messages, self.activity_weights.get('dm', 30))
                 ]
 
-                # انتخاب 3 تا 4 فعالیت وزن‌دار
+                # انتخاب 2 تا 3 فعالیت وزن‌دار (کاهش تعداد فعالیت‌ها)
                 selected_activities = self._weighted_sample(
-                    activities, k=random.randint(3, 4))
+                    activities, k=random.randint(2, 3))
 
                 # اجرای فعالیت‌های انتخاب شده
                 for activity_func in selected_activities:
                     await activity_func()
-                    # استراحت کوتاه بین فعالیت‌ها
-                    await asyncio.sleep(random.randint(30, 90))
+                    # افزایش استراحت بین فعالیت‌ها
+                    await asyncio.sleep(random.randint(60, 120))
 
-                # استراحت بین دورها - زمان کمتری برای استراحت (5 تا 15 دقیقه)
-                wait_time = random.randint(300, 900)
+                    # به‌روزرسانی شمارنده‌ها بر اساس نوع فعالیت
+                    if activity_func == self._interact_with_hashtags:
+                        daily_actions["like"] += 5  # تقریبی
+                    elif activity_func == self._follow_from_hashtags:
+                        daily_actions["follow"] += 3  # تقریبی
+                    elif activity_func == self._auto_unfollow:
+                        daily_actions["unfollow"] += 4  # تقریبی
+                    elif activity_func == self._comment_on_popular_posts:
+                        daily_actions["comment"] += 2  # تقریبی
+                    elif activity_func == self._send_direct_messages:
+                        daily_actions["dm"] += 2  # تقریبی
+
+                # استراحت بین دورها - زمان بیشتری برای استراحت (8 تا 20 دقیقه)
+                wait_time = random.randint(480, 1200)
                 self.logger.info(f"🕒 استراحت به مدت {wait_time // 60} دقیقه")
                 await asyncio.sleep(wait_time)
 
@@ -130,12 +167,20 @@ class AutomatedBot:
                 break
             except Exception as e:
                 self.logger.error(f"خطا در چرخه کاری: {e}")
-                # افزودن لاگ بیشتر برای تشخیص بهتر مشکل
-                import traceback
-                self.logger.error(f"جزئیات خطا: {traceback.format_exc()}")
-                # زمان استراحت طولانی‌تر بعد از خطا و ادامه چرخه
-                self.logger.info("استراحت پس از خطا و تلاش مجدد در 5 دقیقه")
-                await asyncio.sleep(300)
+                error_count += 1
+
+                # اگر خطاهای پشت سر هم زیاد شد، استراحت طولانی‌تر
+                if error_count >= max_consecutive_errors:
+                    self.logger.error(
+                        f"تعداد خطاهای متوالی به {max_consecutive_errors} رسید. استراحت طولانی...")
+                    await asyncio.sleep(1800)  # 30 دقیقه استراحت
+                    error_count = 0
+                else:
+                    # زمان استراحت طولانی‌تر بعد از خطا و ادامه چرخه
+                    self.logger.info(
+                        "استراحت پس از خطا و تلاش مجدد در 5 دقیقه")
+                    await asyncio.sleep(300)
+
                 # بازنشانی شمارنده‌ها
                 self.actions_count = 0
                 from app.bot.utils import get_actions_before_break
@@ -283,7 +328,7 @@ class AutomatedBot:
         except Exception as e:
             self.logger.error(f"❌ خطا در فالوبک خودکار: {e}")
 
-    async def _comment_on_popular_posts(self, count=4):
+    async def _comment_on_popular_posts(self, count=2):
         """کامنت گذاری روی پست‌های محبوب هشتگ‌ها"""
         try:
             # انتخاب یک هشتگ تصادفی از لیست
@@ -292,6 +337,9 @@ class AutomatedBot:
 
             result = self.comment_manager.auto_comment_on_hashtag(
                 hashtag, count=count)
+
+            # استراحت طولانی‌تر بعد از کامنت گذاری
+            await asyncio.sleep(random.randint(60, 120))
 
             self.logger.info(f"✅ کامنت گذاری پایان یافت: {result} کامنت")
 

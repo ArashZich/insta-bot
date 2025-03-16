@@ -101,8 +101,17 @@ class InteractionManager:
                 f"لایک کردن پست {shortcode or media_id} از {username or 'کاربر ناشناس'}")
             random_delay()
 
-            result = self.client.media_like(media_id)
-            success = result is True
+            try:
+                result = self.client.media_like(media_id)
+                success = result is True
+            except Exception as e:
+                if "challenge_required" in str(e):
+                    self.logger.error(
+                        f"❌ خطا در لایک کردن: challenge_required")
+                    self.session_manager.handle_challenge(e)
+                    success = False
+                else:
+                    raise e
 
             if success:
                 self.logger.info(f"✅ لایک موفق: {shortcode or media_id}")
@@ -147,8 +156,17 @@ class InteractionManager:
                 f"کامنت گذاشتن روی پست {shortcode or media_id} از {username or 'کاربر ناشناس'}")
             random_delay()
 
-            result = self.client.media_comment(media_id, text)
-            success = result is not None
+            try:
+                result = self.client.media_comment(media_id, text)
+                success = result is not None
+            except Exception as e:
+                if "challenge_required" in str(e):
+                    self.logger.error(
+                        f"❌ خطا در کامنت گذاشتن: challenge_required")
+                    self.session_manager.handle_challenge(e)
+                    success = False
+                else:
+                    raise e
 
             if success:
                 self.logger.info(f"✅ کامنت موفق: {shortcode or media_id}")
@@ -197,8 +215,17 @@ class InteractionManager:
             self.logger.info(f"فالو کردن کاربر {username or user_id}")
             random_delay()
 
-            result = self.client.user_follow(user_id)
-            success = result is True
+            try:
+                result = self.client.user_follow(user_id)
+                success = result is True
+            except Exception as e:
+                if "challenge_required" in str(e):
+                    self.logger.error(
+                        f"❌ خطا در فالو کردن: challenge_required")
+                    self.session_manager.handle_challenge(e)
+                    success = False
+                else:
+                    raise e
 
             if success:
                 self.logger.info(f"✅ فالو موفق: {username or user_id}")
@@ -341,8 +368,17 @@ class InteractionManager:
             self.logger.info(f"ارسال پیام به کاربر {username or user_id}")
             random_delay()
 
-            result = self.client.direct_send(text, [user_id])
-            success = result is not None
+            try:
+                result = self.client.direct_send(text, [user_id])
+                success = result is not None
+            except Exception as e:
+                if "challenge_required" in str(e):
+                    self.logger.error(
+                        f"❌ خطا در ارسال پیام: challenge_required")
+                    self.session_manager.handle_challenge(e)
+                    success = False
+                else:
+                    raise e
 
             if success:
                 self.logger.info(f"✅ ارسال پیام موفق: {username or user_id}")
