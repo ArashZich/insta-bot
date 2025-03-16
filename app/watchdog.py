@@ -12,7 +12,8 @@ logging.basicConfig(
 )
 
 # تنظیمات
-API_URL = "http://localhost:8000/health"
+# تغییر از localhost به app (نام سرویس در docker-compose)
+API_URL = "http://app:8000/health"
 CHECK_INTERVAL = 300  # 5 دقیقه
 MAX_FAILURES = 3
 
