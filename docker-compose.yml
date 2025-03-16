@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:14
+    container_name: instagram_bot_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=instagram_bot  # این خط تضمین می‌کند دیتابیس ایجاد می‌شود
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   app:
     build: .
     container_name: instagram_bot
@@ -10,25 +28,14 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy  # این خط صبر می‌کند تا دیتابیس کاملاً آماده شود
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/instagram_bot
       - INSTAGRAM_USERNAME=${INSTAGRAM_USERNAME}
       - INSTAGRAM_PASSWORD=${INSTAGRAM_PASSWORD}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    restart: always  # اضافه شده: راه‌اندازی مجدد خودکار در صورت خطا
-
-  db:
-    image: postgres:14
-    container_name: instagram_bot_db
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: always  # اضافه شده: راه‌اندازی مجدد خودکار در صورت خطا
+    restart: always
 
 volumes:
   postgres_data:
