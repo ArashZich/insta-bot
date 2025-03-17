@@ -1,0 +1,540 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Instagram Bot API", "version": "0.1.0" },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "بررسی وضعیت سلامت سرویس",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    },
+    "/api/stats/daily": {
+      "get": {
+        "summary": "Get Daily Stats",
+        "description": "دریافت آمار روزانه بات در بازه زمانی مشخص با مدیریت خطای بهبود یافته",
+        "operationId": "get_daily_stats_api_stats_daily_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Days", "default": 7 },
+            "name": "days",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/weekly": {
+      "get": {
+        "summary": "Get Weekly Stats",
+        "description": "دریافت آمار هفتگی بات",
+        "operationId": "get_weekly_stats_api_stats_weekly_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Weeks", "default": 4 },
+            "name": "weeks",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/monthly": {
+      "get": {
+        "summary": "Get Monthly Stats",
+        "description": "دریافت آمار ماهیانه بات",
+        "operationId": "get_monthly_stats_api_stats_monthly_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Months", "default": 6 },
+            "name": "months",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions": {
+      "get": {
+        "summary": "Get Interactions",
+        "description": "دریافت تاریخچه تعاملات بات",
+        "operationId": "get_interactions_api_interactions_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Limit", "default": 100 },
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Offset", "default": 0 },
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": { "type": "string", "title": "Type" },
+            "name": "type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/stats": {
+      "get": {
+        "summary": "Get Interactions Stats",
+        "description": "دریافت آمار تعاملات بات",
+        "operationId": "get_interactions_stats_api_interactions_stats_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Days", "default": 30 },
+            "name": "days",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/summary": {
+      "get": {
+        "summary": "Get Stats Summary",
+        "description": "دریافت خلاصه آمار بات",
+        "operationId": "get_stats_summary_api_stats_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    },
+    "/api/interactions/recent": {
+      "get": {
+        "summary": "Get Recent Interactions",
+        "description": "دریافت تعاملات اخیر بات",
+        "operationId": "get_recent_interactions_api_interactions_recent_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Limit", "default": 50 },
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/by-type/{interaction_type}": {
+      "get": {
+        "summary": "Get Interactions By Type",
+        "description": "دریافت تعاملات بر اساس نوع",
+        "operationId": "get_interactions_by_type_api_interactions_by_type__interaction_type__get",
+        "parameters": [
+          {
+            "required": true,
+            "schema": { "type": "string", "title": "Interaction Type" },
+            "name": "interaction_type",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Limit", "default": 50 },
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/by-username/{username}": {
+      "get": {
+        "summary": "Get Interactions By Username",
+        "description": "دریافت تعاملات با یک کاربر خاص",
+        "operationId": "get_interactions_by_username_api_interactions_by_username__username__get",
+        "parameters": [
+          {
+            "required": true,
+            "schema": { "type": "string", "title": "Username" },
+            "name": "username",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Limit", "default": 50 },
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/filter": {
+      "get": {
+        "summary": "Filter Interactions",
+        "description": "فیلتر کردن تعاملات بر اساس معیارهای مختلف",
+        "operationId": "filter_interactions_api_interactions_filter_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "string", "title": "Type" },
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": { "type": "string", "title": "Username" },
+            "name": "username",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": { "type": "boolean", "title": "Success" },
+            "name": "success",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Days", "default": 30 },
+            "name": "days",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Limit", "default": 50 },
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/summary": {
+      "get": {
+        "summary": "Get Interactions Summary",
+        "description": "دریافت خلاصه تعاملات بات",
+        "operationId": "get_interactions_summary_api_interactions_summary_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Days", "default": 30 },
+            "name": "days",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/most-interacted": {
+      "get": {
+        "summary": "Get Most Interacted Users",
+        "description": "دریافت کاربرانی که بیشترین تعامل با آنها انجام شده است",
+        "operationId": "get_most_interacted_users_api_interactions_most_interacted_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Limit", "default": 10 },
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": { "type": "integer", "title": "Days", "default": 30 },
+            "name": "days",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Read Root",
+        "operationId": "read_root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    },
+    "/start": {
+      "post": {
+        "summary": "Start Bot",
+        "description": "راه‌اندازی بات",
+        "operationId": "start_bot_start_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    },
+    "/stop": {
+      "post": {
+        "summary": "Stop Bot",
+        "description": "توقف بات",
+        "operationId": "stop_bot_stop_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "summary": "Get Status",
+        "description": "دریافت وضعیت بات",
+        "operationId": "get_status_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    },
+    "/auto-mode/{state}": {
+      "post": {
+        "summary": "Set Auto Mode",
+        "description": "تنظیم حالت خودکار بات",
+        "operationId": "set_auto_mode_auto_mode__state__post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": { "type": "string", "title": "State" },
+            "name": "state",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/force-restart": {
+      "post": {
+        "summary": "Force Restart",
+        "description": "راه‌اندازی مجدد اجباری بات",
+        "operationId": "force_restart_force_restart_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    },
+    "/quick-status": {
+      "get": {
+        "summary": "Quick Status",
+        "description": "دریافت سریع وضعیت بات",
+        "operationId": "quick_status_quick_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": { "$ref": "#/components/schemas/ValidationError" },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": { "anyOf": [{ "type": "string" }, { "type": "integer" }] },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": { "type": "string", "title": "Message" },
+          "type": { "type": "string", "title": "Error Type" }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
