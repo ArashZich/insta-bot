@@ -435,3 +435,21 @@ async def force_restart(background_tasks: BackgroundTasks):
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000,
                 reload=True, timeout_keep_alive=120)
+
+
+@app.get("/quick-status")
+def quick_status():
+    """دریافت سریع وضعیت بات"""
+    global session_manager, automated_bot
+
+    bot_status = "running" if (
+        session_manager and session_manager.logged_in) else "offline"
+    auto_status = "running" if (
+        automated_bot and automated_bot.running) else "stopped"
+
+    return {
+        "status": "healthy",
+        "bot": bot_status,
+        "auto_mode": auto_status,
+        "timestamp": datetime.now().isoformat()
+    }

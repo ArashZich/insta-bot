@@ -13,7 +13,7 @@ logging.basicConfig(
 )
 
 # تنظیمات
-API_URL = "http://app:8000/health"  # آدرس سرویس در شبکه Docker
+API_URL = "http://app:8000/quick-status"  # آدرس سرویس در شبکه Docker
 CHECK_INTERVAL = 60  # کاهش به 1 دقیقه
 MAX_FAILURES = 3
 INITIAL_DELAY = 120  # تاخیر اولیه 2 دقیقه برای راه‌اندازی کامل سرویس‌ها
@@ -46,7 +46,7 @@ def check_service():
             return False
 
         # سپس بررسی API
-        response = requests.get(API_URL, timeout=10)
+        response = requests.get(API_URL, timeout=30)
         if response.status_code == 200:
             logging.info("سرویس در دسترس است")
             try:
