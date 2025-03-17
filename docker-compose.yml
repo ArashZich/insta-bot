@@ -18,7 +18,12 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
-      start_period: 30s  # زمان بیشتری برای راه‌اندازی اولیه
+      start_period: 30s
+    command: >
+      bash -c "
+        echo 'Starting PostgreSQL...' &&
+        docker-entrypoint.sh postgres
+      "
 
   app:
     build: .
@@ -36,7 +41,14 @@ services:
       - INSTAGRAM_USERNAME=${INSTAGRAM_USERNAME}
       - INSTAGRAM_PASSWORD=${INSTAGRAM_PASSWORD}
     command: >
-      bash -c "sleep 10 && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 120"
+      bash -c "
+        echo 'Waiting for database to be ready...' &&
+        sleep 10 &&
+        echo 'Initializing database...' &&
+        python -c 'from app.database.init_db import initialize_database; initialize_database()' &&
+        echo 'Starting API server...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 120
+      "
     restart: always
     
   watchdog:

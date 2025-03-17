@@ -29,21 +29,88 @@ class InteractionManager:
         self.today_stats = self._get_or_create_daily_stats()
 
     def _get_or_create_daily_stats(self):
-        """دریافت یا ساخت رکورد آمار روزانه"""
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        stats = self.db.query(DailyStats).filter(
-            DailyStats.date == today).first()
-        if not stats:
-            stats = DailyStats(date=today)
-            self.db.add(stats)
-            self.db.commit()
-            self.db.refresh(stats)
-        return stats
+        """دریافت یا ساخت رکورد آمار روزانه با مدیریت خطا"""
+        try:
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
+            try:
+                stats = self.db.query(DailyStats).filter(
+                    DailyStats.date == today).first()
+            except Exception as query_error:
+                self.logger.error(f"خطا در جستجوی آمار روزانه: {query_error}")
+                # تلاش برای ریست جلسه دیتابیس
+                self.db = next(get_db())
+                stats = None
+
+            if not stats:
+                try:
+                    stats = DailyStats(
+                        date=today,
+                        likes_count=0,
+                        comments_count=0,
+                        follows_count=0,
+                        unfollows_count=0,
+                        story_views_count=0,
+                        dms_count=0,
+                        total_interactions=0,
+                        success_rate=100.0
+                    )
+                    self.db.add(stats)
+                    self.db.commit()
+                    self.db.refresh(stats)
+                    self.logger.info(
+                        f"رکورد آمار روزانه جدید ایجاد شد: {today.strftime('%Y-%m-%d')}")
+                except Exception as create_error:
+                    self.logger.error(
+                        f"خطا در ایجاد آمار روزانه: {create_error}")
+                    self.db.rollback()
+                    # ایجاد یک آبجکت موقت بدون ذخیره در دیتابیس
+                    stats = DailyStats(
+                        date=today,
+                        likes_count=0,
+                        comments_count=0,
+                        follows_count=0,
+                        unfollows_count=0,
+                        story_views_count=0,
+                        dms_count=0,
+                        total_interactions=0,
+                        success_rate=100.0
+                    )
+                    self.logger.warning(
+                        "از آبجکت آمار موقت استفاده می‌شود (بدون ذخیره در دیتابیس)")
+
+            return stats
+        except Exception as e:
+            self.logger.error(f"خطا در دریافت/ساخت آمار روزانه: {e}")
+            # بازگرداندن یک آبجکت موقت
+            return DailyStats(
+                date=datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
+                likes_count=0,
+                comments_count=0,
+                follows_count=0,
+                unfollows_count=0,
+                story_views_count=0,
+                dms_count=0,
+                total_interactions=0,
+                success_rate=100.0
+            )
+
+    # بخش _record_interaction در فایل app/bot/interaction_manager.py
     def _record_interaction(self, interaction_type, target_user_id=None, target_user_username=None,
                             target_media_id=None, target_media_shortcode=None, content=None, success=True, error=None):
-        """ثبت یک تعامل در دیتابیس"""
+        """ثبت یک تعامل در دیتابیس با مدیریت خطای بهبود یافته"""
         try:
+            # ابتدا بررسی کنیم که دیتابیس و جداول وجود دارند
+            try:
+                # یک کوئری ساده برای بررسی وجود جدول
+                interaction_count = self.db.query(Interaction).count()
+                self.logger.debug(
+                    f"تعداد کل تعاملات قبلی: {interaction_count}")
+            except Exception as check_error:
+                self.logger.error(f"خطا در بررسی دیتابیس: {check_error}")
+                # ادامه اجرا - ممکن است جلوتر مشکل حل شود
+
+            # ایجاد رکورد جدید
             interaction = Interaction(
                 session_id=self.session_id,
                 interaction_type=interaction_type,
@@ -56,26 +123,41 @@ class InteractionManager:
                 error=error
             )
 
-            self.db.add(interaction)
-            self.db.commit()
-
-            # به‌روزرسانی آمار روزانه
-            if success:
-                if interaction_type == "like":
-                    self.today_stats.likes_count += 1
-                elif interaction_type == "comment":
-                    self.today_stats.comments_count += 1
-                elif interaction_type == "follow":
-                    self.today_stats.follows_count += 1
-                elif interaction_type == "unfollow":
-                    self.today_stats.unfollows_count += 1
-                elif interaction_type == "view_story":
-                    self.today_stats.story_views_count += 1
-                elif interaction_type == "dm":
-                    self.today_stats.dms_count += 1
-
-                self.today_stats.total_interactions += 1
+            try:
+                self.db.add(interaction)
                 self.db.commit()
+
+                # به‌روزرسانی آمار روزانه
+                if success:
+                    if not hasattr(self, 'today_stats') or self.today_stats is None:
+                        # اگر today_stats وجود ندارد، آن را دوباره ایجاد کنیم
+                        self.today_stats = self._get_or_create_daily_stats()
+
+                    if interaction_type == "like":
+                        self.today_stats.likes_count += 1
+                    elif interaction_type == "comment":
+                        self.today_stats.comments_count += 1
+                    elif interaction_type == "follow":
+                        self.today_stats.follows_count += 1
+                    elif interaction_type == "unfollow":
+                        self.today_stats.unfollows_count += 1
+                    elif interaction_type == "view_story":
+                        self.today_stats.story_views_count += 1
+                    elif interaction_type == "dm":
+                        self.today_stats.dms_count += 1
+
+                    self.today_stats.total_interactions += 1
+                    try:
+                        self.db.commit()
+                    except Exception as stats_error:
+                        self.logger.error(
+                            f"خطا در به‌روزرسانی آمار روزانه: {stats_error}")
+                        self.db.rollback()
+                        # ادامه کار بدون توقف
+            except Exception as db_error:
+                self.logger.error(f"خطا در ثبت تعامل در دیتابیس: {db_error}")
+                self.db.rollback()
+                # ادامه کار بدون توقف
 
             # افزایش شمارنده اقدامات
             self.actions_count += 1

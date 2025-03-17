@@ -23,21 +23,28 @@ from app.api.interactions import router as interactions_router
 from app.bot.automated_bot import AutomatedBot
 
 
-# اطمینان از وجود دیتابیس
-if not initialize_database():
-    print("❌ خطا در آماده‌سازی دیتابیس. برنامه متوقف می‌شود.")
-    import sys
-    sys.exit(1)
-
-# ایجاد جداول دیتابیس اگر وجود ندارند
+# اطمینان از وجود دیتابیس و آماده‌سازی آن
+print("در حال بررسی و آماده‌سازی دیتابیس...")
 try:
-    Base.metadata.create_all(bind=engine)
-    print("✅ جداول دیتابیس با موفقیت ایجاد شدند.")
+    from app.database.init_db import initialize_database
+
+    for attempt in range(3):  # سه بار تلاش
+        if initialize_database():
+            print("✅ دیتابیس با موفقیت آماده شد.")
+            break
+        elif attempt < 2:  # اگر هنوز تلاش‌های بیشتری باقی مانده
+            print(
+                f"⚠️ خطا در آماده‌سازی دیتابیس. تلاش مجدد ({attempt+2}/3)...")
+            time.sleep(5)  # کمی صبر قبل از تلاش بعدی
+        else:
+            print("❌ خطا در آماده‌سازی دیتابیس پس از سه بار تلاش.")
+            # ادامه اجرا - ممکن است دیتابیس بعداً در دسترس قرار گیرد
 except Exception as e:
-    print(f"❌ خطا در ایجاد جداول دیتابیس: {e}")
+    print(f"❌ خطا در فرآیند آماده‌سازی دیتابیس: {e}")
     traceback.print_exc()
     import sys
     sys.exit(1)
+
 
 # اطمینان از وجود پوشه data
 Path("data").mkdir(exist_ok=True)

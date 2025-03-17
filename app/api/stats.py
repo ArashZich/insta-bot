@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+from loguru import logger
 from typing import List, Dict, Any, Optional
 
 from app.database.connection import get_db
@@ -11,32 +12,53 @@ router = APIRouter()
 
 @router.get("/daily")
 def get_daily_stats(days: int = 7, db: Session = Depends(get_db)):
-    """دریافت آمار روزانه بات در بازه زمانی مشخص"""
-    date_limit = datetime.now() - timedelta(days=days)
+    """دریافت آمار روزانه بات در بازه زمانی مشخص با مدیریت خطای بهبود یافته"""
+    try:
+        date_limit = datetime.now() - timedelta(days=days)
 
-    stats = db.query(DailyStats).filter(
-        DailyStats.date >= date_limit
-    ).order_by(DailyStats.date).all()
+        # بررسی جداول
+        try:
+            stats = db.query(DailyStats).filter(
+                DailyStats.date >= date_limit
+            ).order_by(DailyStats.date).all()
+        except Exception as db_error:
+            logger.error(f"خطا در دسترسی به جدول آمار روزانه: {db_error}")
+            # بازگشت داده خالی به جای خطای 500
+            return {
+                "days": days,
+                "stats": [],
+                "message": "داده آماری موجود نیست یا خطایی در دسترسی به دیتابیس رخ داده است."
+            }
 
-    # تبدیل داده‌ها به فرمت مناسب
-    result = []
-    for stat in stats:
-        result.append({
-            "date": stat.date.strftime("%Y-%m-%d"),
-            "likes": stat.likes_count,
-            "comments": stat.comments_count,
-            "follows": stat.follows_count,
-            "unfollows": stat.unfollows_count,
-            "story_views": stat.story_views_count,
-            "dms": stat.dms_count,
-            "total": stat.total_interactions,
-            "success_rate": stat.success_rate
-        })
+        # تبدیل داده‌ها به فرمت مناسب
+        result = []
+        for stat in stats:
+            result.append({
+                "date": stat.date.strftime("%Y-%m-%d"),
+                "likes": stat.likes_count,
+                "comments": stat.comments_count,
+                "follows": stat.follows_count,
+                "unfollows": stat.unfollows_count,
+                "story_views": stat.story_views_count,
+                "dms": stat.dms_count,
+                "total": stat.total_interactions,
+                "success_rate": stat.success_rate
+            })
 
-    return {
-        "days": days,
-        "stats": result
-    }
+        return {
+            "days": days,
+            "stats": result
+        }
+    except Exception as e:
+        logger.error(f"خطا در API آمار روزانه: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # بازگرداندن پاسخ خالی به جای خطا
+        return {
+            "days": days,
+            "stats": [],
+            "error": "خطایی در پردازش داده‌های آماری رخ داده است."
+        }
 
 
 @router.get("/summary")
