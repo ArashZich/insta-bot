@@ -1,4 +1,6 @@
 import random
+import time
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 import re
 
@@ -101,7 +103,7 @@ class CommentManager:
         comments = self.categorized_comments[category]
         return random.choice(comments)
 
-    def auto_comment_on_hashtag(self, hashtag, count=5):
+    def auto_comment_on_hashtag(self, hashtag, count=1):
         """کامنت گذاری خودکار روی پست‌های مرتبط با هشتگ"""
         try:
             self.logger.info(f"کامنت گذاری روی #{hashtag}")
@@ -113,43 +115,46 @@ class CommentManager:
                 self.logger.info(f"هیچ پستی با هشتگ #{hashtag} یافت نشد")
                 return 0
 
-            # محدود کردن تعداد
+            # محدود کردن تعداد و انتخاب تصادفی
             if len(medias) > count:
                 medias = random.sample(medias, count)
 
             comment_count = 0
 
+            # کامنت‌های بسیار ساده برای کاهش خطر
+            simple_comments = ["👌", "👍", "عالی", "خیلی خوب", "قشنگه", "جالبه"]
+
             for media in medias:
-                # دریافت اطلاعات کامل پست برای کپشن
+                # استراحت طولانی‌تر قبل از کامنت
+                time.sleep(random.randint(20, 40))
+
                 try:
-                    media_info = self.client.media_info(media.id)
-                    caption = media_info.caption_text if media_info.caption_text else ""
-                    username = media_info.user.username
+                    username = media.user.username
+                    user_id = media.user.pk
 
-                    # انتخاب کامنت مناسب
-                    comment_text = self.get_relevant_comment(caption, username)
+                    # انتخاب کامنت ساده و کوتاه
+                    comment_text = random.choice(simple_comments)
 
-                    # ارسال کامنت
-                    if self.interaction_manager.comment_media(
+                    # ارسال کامنت - با فرض اینکه حتی در صورت شکست، باید ادامه دهیم
+                    comment_result = self.interaction_manager.comment_media(
                         media_id=media.id,
                         shortcode=media.code,
                         username=username,
                         text=comment_text
-                    ):
+                    )
+
+                    # حتی اگر comment_media مقدار False برگرداند، ما کار را ادامه می‌دهیم
+                    # فقط برای لاگ گذاری استفاده می‌کنیم
+                    if comment_result:
                         comment_count += 1
 
-                    # لایک کردن پست (احتمال 70%)
-                    if random.random() < 0.7:
-                        self.interaction_manager.like_media(
-                            media_id=media.id,
-                            shortcode=media.code,
-                            username=username
-                        )
+                    # استراحت طولانی بعد از هر تلاش کامنت
+                    time.sleep(random.randint(60, 120))
 
-                    if should_take_break():
-                        take_random_break(self.logger)
                 except Exception as e:
                     self.logger.error(f"خطا در کامنت روی پست {media.id}: {e}")
+                    # استراحت کوتاه و ادامه با پست بعدی
+                    time.sleep(30)
                     continue
 
             self.logger.info(f"✅ {comment_count} کامنت با موفقیت ارسال شد")
