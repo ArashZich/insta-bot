@@ -1,6 +1,4 @@
-# app/database/connection.py
-
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import DATABASE_URL
@@ -26,7 +24,7 @@ for attempt in range(max_retries):
         )
         # تست اتصال
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         logger.info(f"اتصال به دیتابیس برقرار شد: {DATABASE_URL}")
         break
     except Exception as e:
@@ -36,10 +34,7 @@ for attempt in range(max_retries):
             time.sleep(retry_interval)  # صبر قبل از تلاش مجدد
         else:
             logger.critical("نمی‌توان به دیتابیس متصل شد پس از چندین تلاش!")
-            # ایجاد یک موتور دامی برای جلوگیری از خطاهای فاتال
-            engine = create_engine("sqlite:///:memory:")
-            logger.warning(
-                "از دیتابیس حافظه موقت استفاده می‌شود - این فقط برای جلوگیری از خطاهای فاتال است!")
+            raise  # اجازه می‌دهیم خطا ادامه یابد تا برنامه متوقف شود یا مسیر دیگری را دنبال کند
 
 # ایجاد کلاس جلسه دیتابیس
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
